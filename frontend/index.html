@@ -267,6 +267,7 @@ select option{background:var(--sfc2)}
     </div>
     <div id="page-usermgmt" class="page">
       <div class="page-title" data-i18n="navUsers">ユーザー管理</div>
+      <div style="margin-bottom:16px"><button class="btn btn-primary btn-sm" onclick="openAddUserModal()" data-i18n="addUser">+ ユーザーを追加</button></div>
       <div class="card user-mgmt-table">
         <table class="data-table"><thead><tr><th data-i18n="nameCol">名前</th><th data-i18n="emailCol">メール</th><th data-i18n="positionCol">役職</th><th data-i18n="statusCol">状態</th><th data-i18n="actionsCol">操作</th></tr></thead><tbody id="usermgmt-tbody"></tbody></table>
       </div>
@@ -354,6 +355,20 @@ select option{background:var(--sfc2)}
       <button class="btn btn-secondary" onclick="closeModal()" data-i18n="close">閉じる</button>
       <button class="btn btn-danger" id="btn-reject" onclick="doReject()" style="display:none" data-i18n="reject">差し戻す</button>
       <button class="btn btn-success" id="btn-approve" onclick="doApprove()" style="display:none" data-i18n="approve">承認する &#10003;</button>
+    </div>
+  </div>
+</div>
+<div class="modal-overlay" id="user-modal">
+  <div class="modal" style="max-width:420px">
+    <div class="modal-title" data-i18n="addUserTitle">ユーザーを追加</div>
+    <div class="form-group"><label data-i18n="userNameLabel">名前</label><input id="user-modal-name" type="text" placeholder="例: 鈴木 次郎"></div>
+    <div class="form-group"><label data-i18n="userEmailLabel">メールアドレス</label><input id="user-modal-email" type="email" placeholder="例: user@example.com" autocomplete="off"></div>
+    <div class="form-group"><label data-i18n="userPwLabel">初期パスワード（8文字以上）</label><input id="user-modal-pw" type="password" autocomplete="new-password"></div>
+    <div class="form-group"><label data-i18n="positionCol">役職</label><select id="user-modal-position"></select></div>
+    <div id="user-modal-err" style="color:var(--red);font-size:12px;margin-bottom:8px;display:none"></div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeUserModal()" data-i18n="cancel">キャンセル</button>
+      <button class="btn btn-primary" onclick="submitUserModal()" data-i18n="addBtn">追加</button>
     </div>
   </div>
 </div>
@@ -462,7 +477,13 @@ const I18N={
     countSuffix:"件",
     autoApproveGroup:"[自動承認候補]",notifyConfirmGroup:"[要確認候補]",
     autoApproveRec:"Phase 2 で自動承認の対象として推奨",notifyConfirmRec:"通知型として処理し、ワンクリック確認推奨",
-    autoApplyCount:"申請件数",autoApplyRate:"承認率",autoApplyAvgTime:"平均承認時間",autoApplySaved:"月推定削減時間"
+    autoApplyCount:"申請件数",autoApplyRate:"承認率",autoApplyAvgTime:"平均承認時間",autoApplySaved:"月推定削減時間",
+    addUser:"+ ユーザーを追加",addUserTitle:"ユーザーを追加",
+    userNameLabel:"名前",userEmailLabel:"メールアドレス",userPwLabel:"初期パスワード（8文字以上）",
+    confirmDeleteUser:"このユーザーを削除しますか？この操作は取り消せません。",
+    userAdded:"ユーザーを追加しました",userDeleted:"ユーザーを削除しました",deleteUser:"削除",
+    userNameRequired:"名前を入力してください",userEmailRequired:"メールアドレスを入力してください",
+    userPwRequired:"パスワードは8文字以上で入力してください"
   },
   en:{
     loginSub:"AI Approval Agent",email:"Email",password:"Password",login:"Login",
@@ -538,7 +559,13 @@ const I18N={
     countSuffix:"",
     autoApproveGroup:"[Auto-approve candidates]",notifyConfirmGroup:"[Notify & confirm candidates]",
     autoApproveRec:"Recommended for auto-approval in Phase 2",notifyConfirmRec:"Recommended for notify-type with one-click confirmation",
-    autoApplyCount:"Requests",autoApplyRate:"Approval rate",autoApplyAvgTime:"Avg approval time",autoApplySaved:"Est. time saved/month"
+    autoApplyCount:"Requests",autoApplyRate:"Approval rate",autoApplyAvgTime:"Avg approval time",autoApplySaved:"Est. time saved/month",
+    addUser:"+ Add User",addUserTitle:"Add User",
+    userNameLabel:"Name",userEmailLabel:"Email",userPwLabel:"Initial Password (8+ chars)",
+    confirmDeleteUser:"Delete this user? This cannot be undone.",
+    userAdded:"User added",userDeleted:"User deleted",deleteUser:"Delete",
+    userNameRequired:"Please enter a name",userEmailRequired:"Please enter an email",
+    userPwRequired:"Password must be at least 8 characters"
   }
 };
 
@@ -578,21 +605,26 @@ function toggleModalDiff(){const b=document.getElementById("modal-diff-body"),a=
 document.getElementById("detail-modal").addEventListener("click",function(e){if(e.target===this)closeModal()});
 document.getElementById("pw-modal").addEventListener("click",function(e){if(e.target===this)closePwModal()});
 document.getElementById("pos-modal").addEventListener("click",function(e){if(e.target===this)closePosModal()});
+document.getElementById("user-modal").addEventListener("click",function(e){if(e.target===this)closeUserModal()});
 function renderAutoCandidate(c,tl){const recMsg=c.recommendation==="auto_approve"?_t("autoApproveRec"):_t("notifyConfirmRec");return`<div style="border:1px solid var(--bdr);border-radius:var(--radius);padding:12px;margin-bottom:8px"><div style="font-weight:600;margin-bottom:6px">${tl[c.type]||c.type}</div><div style="font-size:12px;color:var(--txt2);display:grid;grid-template-columns:1fr 1fr;gap:4px"><span>${_t("autoApplyCount")}: ${c.total}${_t("countSuffix")}</span><span>${_t("autoApplyRate")}: ${Math.round(c.approval_rate*100)}% (${c.approved}/${c.total})</span><span>${_t("autoApplyAvgTime")}: ${c.avg_hours}h</span><span>${_t("autoApplySaved")}: 約${c.time_saved_hours_per_month}h/月</span></div><div style="font-size:12px;color:var(--accent);margin-top:6px">→ ${recMsg}</div></div>`}
 function renderPhase3Stats(d){document.getElementById("phase3-approver-tbody").innerHTML=d.by_approver.map(a=>`<tr><td>${escHtml(a.approver_name)}</td><td>${a.avg_hours}h</td><td>${a.approval_rate}%</td><td>${a.approved}件 / ${a.total}件</td></tr>`).join("")||`<tr><td colspan="4" style="color:var(--txt2);text-align:center">${_t("noData")}</td></tr>`;const tl={confirm:_t("typeConfirm"),notify:_t("typeNotify"),judge:_t("typeJudge"),consensus:_t("typeConsensus")},te=document.getElementById("phase3-type-stats"),byType=d.by_type||[];te.innerHTML=byType.length?byType.map(item=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bdr);font-size:13px"><span>${tl[item.type]||item.type}</span><span style="display:flex;gap:12px;align-items:center"><span style="color:var(--txt2);font-size:11px">${item.count}${_t("countSuffix")}</span><span style="color:var(--accent);font-weight:600">${item.avg_hours}h</span></span></div>`).join(""):`<div style="color:var(--txt2);font-size:13px">${_t("noData")}</div>`;const autoCard=document.getElementById("phase3-automation-card"),autoEl=document.getElementById("phase3-automation-msg"),auto=d.automation_candidates;if(auto===null||auto===undefined){autoCard.style.display="none"}else if(auto.length===0){autoCard.style.display="";autoEl.textContent=_t("automationNone")}else{autoCard.style.display="";const autoApprove=auto.filter(x=>x.recommendation==="auto_approve"),notifyConfirm=auto.filter(x=>x.recommendation==="notify_and_confirm");let html="";if(autoApprove.length){html+=`<div style="font-size:12px;font-weight:600;color:var(--green);margin-bottom:8px">${_t("autoApproveGroup")}</div>`;html+=autoApprove.map(c=>renderAutoCandidate(c,tl)).join("")}if(notifyConfirm.length){html+=`<div style="font-size:12px;font-weight:600;color:var(--yellow);margin:${autoApprove.length?"12px":"0"} 0 8px">${_t("notifyConfirmGroup")}</div>`;html+=notifyConfirm.map(c=>renderAutoCandidate(c,tl)).join("")}autoEl.innerHTML=html}}
 async function loadPhase3(){try{const r=_user.position_rank;document.getElementById("phase3-title").textContent=r===1?_t("dashboardAll"):r===2?_t("dashboardTeam"):_t("dashboardSelf");const d=await api("GET","/api/phase3/stats");renderPhase3Stats(d)}catch(e){toast(e.message,"error")}await loadBottleneck()}
 async function loadBottleneck(){if(_user.role_type==="requester")return;const card=document.getElementById("phase3-bottleneck-card");try{const d=await api("GET","/api/phase3/bottleneck");card.style.display="block";const tl={confirm:_t("typeConfirm"),notify:_t("typeNotify"),judge:_t("typeJudge"),consensus:_t("typeConsensus")};document.getElementById("phase3-slow-approvers").innerHTML=d.slow_approvers.length?d.slow_approvers.map(a=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bdr);font-size:13px"><span>${escHtml(a.approver_name)}</span><span style="color:var(--red)">${a.avg_hours}h <span style="color:var(--txt2);font-size:11px">(+${a.delta_hours}h)</span></span></div>`).join(""):`<div style="color:var(--txt2);font-size:13px">${_t("noData")}</div>`;document.getElementById("phase3-slow-types").innerHTML=d.slow_types.length?d.slow_types.map(t=>`<div style="display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--bdr);font-size:13px"><span>${tl[t.type]||t.type}</span><span style="color:var(--orange);font-weight:600">${t.avg_hours}h</span></div>`).join(""):`<div style="color:var(--txt2);font-size:13px">${_t("noData")}</div>`;document.getElementById("phase3-stalled").innerHTML=d.stalled.length?d.stalled.map(r=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--bdr);font-size:13px;cursor:pointer" onclick="openDetail(${r.id})"><span>${escHtml(r.title||"(タイトルなし)")}</span><span style="color:var(--yellow);font-size:12px">${r.days_pending}日滞留</span></div>`).join(""):`<div style="color:var(--txt2);font-size:13px">${_t("noData")}</div>`}catch(e){card.style.display="none"}}
+const _FIXED_EMAILS=new Set(["admin@codebridge.ai","manager@codebridge.ai","staff@codebridge.ai"]);
 async function loadUserMgmt(){try{const[users,positions]=await Promise.all([api("GET","/api/admin/users"),api("GET","/api/admin/positions")]);_positions=positions;
-const posOpts=positions.map(p=>`<option value="${p.id}">${escHtml(p.name)}</option>`).join("");
 const tb=document.getElementById("usermgmt-tbody");
-tb.innerHTML=users.map(u=>`<tr><td>${escHtml(u.name)}</td><td style="font-size:12px;color:var(--txt2)">${escHtml(u.email)}</td><td><select data-prev="${u.position_id}" onchange="changeUserPosition(${u.id},parseInt(this.value),this)" style="width:auto;min-width:120px">${positions.map(p=>`<option value="${p.id}" ${u.position_id===p.id?"selected":""}>${escHtml(p.name)}</option>`).join("")}</select></td><td><span class="badge ${u.active?"badge-approved":"badge-rejected"}">${u.active?_t("activeLabel"):_t("inactiveLabel")}</span></td><td style="display:flex;gap:6px;flex-wrap:wrap;padding:8px 12px"><button class="btn btn-sm ${u.active?"btn-danger":"btn-success"}" onclick="toggleUserActive(${u.id},${!u.active},this)">${u.active?_t("disableUser"):_t("enableUser")}</button><button class="btn btn-sm btn-secondary" onclick="resetUserPassword(${u.id})">${_t("resetPw")}</button></td></tr>`).join("");
+tb.innerHTML=users.map(u=>{const canDel=!_FIXED_EMAILS.has(u.email)&&u.email!==_user.email&&u.position_rank!==1;return`<tr><td>${escHtml(u.name)}</td><td style="font-size:12px;color:var(--txt2)">${escHtml(u.email)}</td><td><select data-prev="${u.position_id}" onchange="changeUserPosition(${u.id},parseInt(this.value),this)" style="width:auto;min-width:120px">${positions.map(p=>`<option value="${p.id}" ${u.position_id===p.id?"selected":""}>${escHtml(p.name)}</option>`).join("")}</select></td><td><span class="badge ${u.active?"badge-approved":"badge-rejected"}">${u.active?_t("activeLabel"):_t("inactiveLabel")}</span></td><td style="display:flex;gap:6px;flex-wrap:wrap;padding:8px 12px"><button class="btn btn-sm ${u.active?"btn-danger":"btn-success"}" onclick="toggleUserActive(${u.id},${!u.active},this)">${u.active?_t("disableUser"):_t("enableUser")}</button><button class="btn btn-sm btn-secondary" onclick="resetUserPassword(${u.id})">${_t("resetPw")}</button>${canDel?`<button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id},'${escHtml(u.name)}')">${_t("deleteUser")}</button>`:""}</td></tr>`}).join("");
 const cards=document.getElementById("usermgmt-cards");
-cards.innerHTML=users.map(u=>`<div class="user-card"><div class="user-card-name">${escHtml(u.name)}</div><div class="user-card-email">${escHtml(u.email)}</div><div class="user-card-row"><select data-prev="${u.position_id}" onchange="changeUserPosition(${u.id},parseInt(this.value),this)" style="flex:1">${positions.map(p=>`<option value="${p.id}" ${u.position_id===p.id?"selected":""}>${escHtml(p.name)}</option>`).join("")}</select><span class="badge ${u.active?"badge-approved":"badge-rejected"}">${u.active?_t("activeLabel"):_t("inactiveLabel")}</span></div><div class="user-card-actions"><button class="btn btn-sm ${u.active?"btn-danger":"btn-success"}" onclick="toggleUserActive(${u.id},${!u.active},this)">${u.active?_t("disableUser"):_t("enableUser")}</button><button class="btn btn-sm btn-secondary" onclick="resetUserPassword(${u.id})">${_t("resetPw")}</button></div></div>`).join("")
+cards.innerHTML=users.map(u=>{const canDel=!_FIXED_EMAILS.has(u.email)&&u.email!==_user.email&&u.position_rank!==1;return`<div class="user-card"><div class="user-card-name">${escHtml(u.name)}</div><div class="user-card-email">${escHtml(u.email)}</div><div class="user-card-row"><select data-prev="${u.position_id}" onchange="changeUserPosition(${u.id},parseInt(this.value),this)" style="flex:1">${positions.map(p=>`<option value="${p.id}" ${u.position_id===p.id?"selected":""}>${escHtml(p.name)}</option>`).join("")}</select><span class="badge ${u.active?"badge-approved":"badge-rejected"}">${u.active?_t("activeLabel"):_t("inactiveLabel")}</span></div><div class="user-card-actions"><button class="btn btn-sm ${u.active?"btn-danger":"btn-success"}" onclick="toggleUserActive(${u.id},${!u.active},this)">${u.active?_t("disableUser"):_t("enableUser")}</button><button class="btn btn-sm btn-secondary" onclick="resetUserPassword(${u.id})">${_t("resetPw")}</button>${canDel?`<button class="btn btn-sm btn-danger" onclick="deleteUser(${u.id},'${escHtml(u.name)}')">${_t("deleteUser")}</button>`:""}</div></div>`}).join("")
 }catch(e){toast(e.message,"error")}}
 async function changeUserPosition(uid,pid,sel){const prev=sel.dataset.prev,posName=sel.options[sel.selectedIndex].text;if(!confirm(_t("confirmChangePos").replace("{name}",posName))){sel.value=prev;return}try{await api("PUT",`/api/admin/users/${uid}/position`,{position_id:pid});sel.dataset.prev=String(pid);toast(_t("posUpdated"),"success")}catch(e){sel.value=prev;toast(e.message,"error")}}
 async function toggleUserActive(uid,active,btn){if(!confirm(active?_t("confirmActivate"):_t("confirmDeactivate")))return;try{await api("PUT",`/api/admin/users/${uid}/active`,{active});toast(active?_t("activated"):_t("deactivated"),"success");loadUserMgmt()}catch(e){toast(e.message,"error")}}
 async function resetUserPassword(uid){if(!confirm(_t("confirmResetPw")))return;try{const r=await api("POST",`/api/admin/users/${uid}/reset_password`);document.getElementById("pw-modal-value").textContent=r.temp_password;document.getElementById("pw-modal").classList.add("open")}catch(e){toast(e.message,"error")}}
 function closePwModal(){document.getElementById("pw-modal").classList.remove("open")}
+function openAddUserModal(){document.getElementById("user-modal-name").value="";document.getElementById("user-modal-email").value="";document.getElementById("user-modal-pw").value="";const sel=document.getElementById("user-modal-position");sel.innerHTML=_positions.map(p=>`<option value="${p.id}">${escHtml(p.name)}</option>`).join("");document.getElementById("user-modal-err").style.display="none";document.getElementById("user-modal").classList.add("open")}
+function closeUserModal(){document.getElementById("user-modal").classList.remove("open")}
+async function submitUserModal(){const name=document.getElementById("user-modal-name").value.trim(),email=document.getElementById("user-modal-email").value.trim(),pw=document.getElementById("user-modal-pw").value,position_id=parseInt(document.getElementById("user-modal-position").value),err=document.getElementById("user-modal-err");err.style.display="none";if(!name){err.textContent=_t("userNameRequired");err.style.display="block";return}if(!email){err.textContent=_t("userEmailRequired");err.style.display="block";return}if(pw.length<8){err.textContent=_t("userPwRequired");err.style.display="block";return}try{await api("POST","/api/admin/users",{name,email,password:pw,position_id});toast(_t("userAdded"),"success");closeUserModal();loadUserMgmt()}catch(e){err.textContent=e.message;err.style.display="block"}}
+async function deleteUser(uid,name){if(!confirm(_t("confirmDeleteUser")))return;try{await api("DELETE",`/api/admin/users/${uid}`);toast(_t("userDeleted"),"success");loadUserMgmt()}catch(e){toast(e.message,"error")}}
 function copyTempPw(){const v=document.getElementById("pw-modal-value").textContent;navigator.clipboard.writeText(v).then(()=>toast(_t("pwCopied"),"success")).catch(()=>toast(_t("pwCopyFail"),"error"))}
 async function loadPositions(){try{const positions=await api("GET","/api/admin/positions");_positions=positions;const list=document.getElementById("positions-list");document.getElementById("reorder-save-area").style.display="none";list.innerHTML=positions.map(p=>{const actionBtns=p.is_system?"":
 `<button class="btn btn-sm btn-secondary" onclick="openEditPositionModal(${p.id})">${_t("editPos")}</button><button class="btn btn-sm btn-danger" onclick="doDeletePosition(${p.id})">${_t("deletePos")}</button>`;
