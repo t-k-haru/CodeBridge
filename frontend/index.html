@@ -85,7 +85,7 @@ select option{background:var(--sfc2)}
 .step.done .step-num{background:var(--green);border-color:var(--green);color:#000}
 .step-sep{width:32px;height:1px;background:var(--bdr)}
 .diff-block{background:var(--diff-bg);border:1px solid var(--bdr);border-radius:6px;padding:12px;font-family:monospace;font-size:12px;overflow-x:auto;margin-top:8px}
-.da{color:var(--green)}.dd{color:var(--red)}.dc{color:var(--txt2)}
+.da{color:var(--green);background:rgba(81,207,102,.10);display:block;white-space:pre-wrap;word-break:break-all}.dd{color:var(--red);background:rgba(255,107,107,.10);display:block;white-space:pre-wrap;word-break:break-all}.dc{color:var(--txt2);display:block;white-space:pre-wrap;word-break:break-all}
 .accordion-toggle{cursor:pointer;user-select:none;display:flex;align-items:center;gap:6px;font-size:13px;color:var(--accent)}
 .accordion-body{display:none;margin-top:10px}
 .accordion-body.open{display:block}
@@ -643,7 +643,39 @@ function relTime(ts){const d=(Date.now()-new Date(ts).getTime())/1000;if(d<60)re
 function fmtDate(ts){return ts?ts.replace("T"," ").substring(0,16):"—"}
 function escHtml(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}
 function renderMarkdown(md){let h=escHtml(md);h=h.replace(/^## (.+)$/gm,"<h2>$1</h2>");h=h.replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>");h=h.replace(/^[-・] (.+)$/gm,"<li>$1</li>");h=h.replace(/((?:<li>.*<\/li>\n?)+)/s,"<ul>$1</ul>");h=h.replace(/\n\n/g,"<br><br>");return h}
-function renderDiff(orig,newCode,targetId){if(!orig||!newCode){document.getElementById(targetId).textContent="差分データなし";return}const ol=orig.split("\n"),nl=newCode.split("\n"),ml=Math.max(ol.length,nl.length);let h="";for(let i=0;i<Math.min(ml,200);i++){const o=ol[i],n=nl[i];if(o===undefined)h+=`<div class="da">+ ${escHtml(n)}</div>`;else if(n===undefined)h+=`<div class="dd">- ${escHtml(o)}</div>`;else if(o!==n)h+=`<div class="dd">- ${escHtml(o)}</div><div class="da">+ ${escHtml(n)}</div>`;else h+=`<div class="dc">  ${escHtml(o)}</div>`}document.getElementById(targetId).innerHTML=h}
+// LCS ベースの行差分アルゴリズム（正確な diff）
+function lcsLineDiff(a,b){const m=a.length,n=b.length,dp=new Int32Array((m+1)*(n+1));for(let i=m-1;i>=0;i--)for(let j=n-1;j>=0;j--)dp[i*(n+1)+j]=a[i]===b[j]?dp[(i+1)*(n+1)+(j+1)]+1:Math.max(dp[(i+1)*(n+1)+j],dp[i*(n+1)+(j+1)]);const ops=[];let i=0,j=0;while(i<m||j<n){if(i<m&&j<n&&a[i]===b[j]){ops.push({t:'eq',s:a[i]});i++;j++}else if(j<n&&(i>=m||dp[i*(n+1)+(j+1)]>=dp[(i+1)*(n+1)+j])){ops.push({t:'add',s:b[j]});j++}else{ops.push({t:'del',s:a[i]});i++}}return ops}
+// 差分表示：変更行前後3行コンテキスト付き、それ以外は省略
+function renderDiff(orig,newCode,targetId){
+  const el=document.getElementById(targetId);
+  if(!orig||!newCode){el.innerHTML='<span style="color:var(--txt2);font-size:12px">差分データなし</span>';return}
+  const al=orig.split('\n'),bl=newCode.split('\n');
+  // ファイルが大きい場合は高速フォールバック（行単位の単純比較）
+  const ops=(al.length+bl.length<=1200)?lcsLineDiff(al,bl):(()=>{const r=[],m=al.length,n=bl.length;let i=0,j=0;while(i<m||j<n){if(i<m&&j<n&&al[i]===bl[j]){r.push({t:'eq',s:al[i]});i++;j++}else if(i>=m){r.push({t:'add',s:bl[j]});j++}else if(j>=n){r.push({t:'del',s:al[i]});i++}else{r.push({t:'del',s:al[i]});r.push({t:'add',s:bl[j]});i++;j++}}return r})();
+  let added=0,deleted=0;ops.forEach(o=>{if(o.t==='add')added++;else if(o.t==='del')deleted++});
+  // 変更行の前後 C 行を表示対象にマーク
+  const C=3,show=new Uint8Array(ops.length);
+  for(let i=0;i<ops.length;i++)if(ops[i].t!=='eq')for(let k=Math.max(0,i-C);k<=Math.min(ops.length-1,i+C);k++)show[k]=1;
+  // サマリーヘッダー
+  let h=`<div style="padding:5px 10px;margin-bottom:6px;background:var(--sfc2);border-radius:4px;font-size:12px;display:flex;gap:14px;align-items:center">`;
+  if(added)h+=`<span style="color:var(--green);font-weight:600">+${added}行追加</span>`;
+  if(deleted)h+=`<span style="color:var(--red);font-weight:600">−${deleted}行削除</span>`;
+  if(!added&&!deleted)h+='<span style="color:var(--txt2)">変更なし</span>';
+  h+='</div>';
+  const ns='display:inline-block;min-width:30px;text-align:right;padding-right:6px;color:var(--txt2);font-size:10px;user-select:none;opacity:0.5';
+  let on=1,nn=1,skip=0;
+  for(let i=0;i<ops.length;i++){
+    const o=ops[i];
+    if(!show[i]){skip++;if(o.t!=='add')on++;if(o.t!=='del')nn++;
+      if(i===ops.length-1||show[i+1]){h+=`<div style="padding:3px 8px;color:var(--txt2);font-size:11px;text-align:center;background:var(--sfc2);border-radius:2px;margin:2px 0">⋯ ${skip}行省略 ⋯</div>`;skip=0}
+      continue}
+    if(skip){h+=`<div style="padding:3px 8px;color:var(--txt2);font-size:11px;text-align:center;background:var(--sfc2);border-radius:2px;margin:2px 0">⋯ ${skip}行省略 ⋯</div>`;skip=0}
+    if(o.t==='eq'){h+=`<div class="dc"><span style="${ns}">${on}</span>  ${escHtml(o.s)}</div>`;on++;nn++}
+    else if(o.t==='del'){h+=`<div class="dd"><span style="${ns}">${on}</span>- ${escHtml(o.s)}</div>`;on++}
+    else{h+=`<div class="da"><span style="${ns}">${nn}</span>+ ${escHtml(o.s)}</div>`;nn++}
+  }
+  el.innerHTML=h
+}
 function toast(msg,type=""){const el=document.getElementById("toast");el.textContent=msg;el.className="show "+type;setTimeout(()=>{el.className=""},3000)}
 function loadAccount(){["pw-current","pw-new","pw-new2"].forEach(id=>document.getElementById(id).value="");const e=document.getElementById("pw-change-err");e.style.display="none";e.textContent="";setTheme(_theme);setLang(_lang)}
 function togglePwVis(id,btn){const el=document.getElementById(id);el.type=el.type==="password"?"text":"password";btn.textContent=el.type==="password"?_t("show"):_t("hide")}
