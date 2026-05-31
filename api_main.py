@@ -151,6 +151,12 @@ class PositionUpdateReq(BaseModel):
 class PositionsReorderReq(BaseModel):
     ordered_ids: list
 
+class CreateUserReq(BaseModel):
+    name: str
+    email: str
+    password: str
+    position_id: int
+
 class PositionAssignReq(BaseModel):
     position_id: int
 
@@ -443,6 +449,28 @@ def delete_position(pid: int, user=Depends(require_admin())):
 @app.get("/api/admin/users")
 def list_all_users(user=Depends(require_admin())):
     return auth.list_users()
+
+
+@app.post("/api/admin/users")
+def create_user_endpoint(req: CreateUserReq, user=Depends(require_admin())):
+    try:
+        uid = auth.create_user(req.name, req.email, req.password, req.position_id)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    auth.log_action(user["id"], user["name"], "create_user",
+                    f"name={req.name} email={req.email}")
+    return {"id": uid, "ok": True}
+
+
+@app.delete("/api/admin/users/{user_id}")
+def delete_user_endpoint(user_id: int, user=Depends(require_admin())):
+    try:
+        auth.delete_user(user_id, user["id"])
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    auth.log_action(user["id"], user["name"], "delete_user",
+                    f"target_user_id={user_id}")
+    return {"ok": True}
 
 
 @app.put("/api/admin/users/{user_id}/role")

@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
 """
 CodeBridge Ringi — 認証・ユーザー管理・稟議・アクティビティログ・コスト追跡
-3アカウント固定。ユーザー追加機能なし。
 """
 import sqlite3, hashlib, json
 from datetime import datetime, timedelta
@@ -14,6 +13,8 @@ FIXED_USERS = [
     {"name": "山田 花子", "email": "manager@codebridge.ai", "password": "Manager1234!", "role": "manager"},
     {"name": "佐藤 一郎", "email": "staff@codebridge.ai",   "password": "Staff1234!",   "role": "staff"},
 ]
+# デモ保護: 削除・変更不可の固定アカウントメール一覧
+FIXED_USER_EMAILS = frozenset(u["email"] for u in FIXED_USERS)
 
 # 自動化候補の判定パラメータ
 AUTOMATION_WINDOW_DAYS = 90
@@ -198,6 +199,53 @@ def reset_password(user_id: int) -> str:
 def change_password(user_id: int, new_password: str):
     with _conn() as c:
         c.execute("UPDATE users SET pw_hash=? WHERE id=?", (_hash(new_password), user_id))
+
+
+def create_user(name: str, email: str, password: str, position_id: int) -> int:
+    """新規ユーザーを作成して user_id を返す。エラー時は ValueError を送出する。"""
+    name = name.strip()
+    email = email.strip().lower()
+    if not name:
+        raise ValueError("名前を入力してください")
+    if not email:
+        raise ValueError("メールアドレスを入力してください")
+    if len(password) < 8:
+        raise ValueError("パスワードは8文字以上で入力してください")
+    with _conn() as c:
+        pos = c.execute("SELECT rank FROM positions WHERE id=?", (position_id,)).fetchone()
+        if not pos:
+            raise ValueError("指定された役職が見つかりません")
+        # legacy role 列は position rank から導出（権限は role_type が主）
+        rank = pos["rank"]
+        role = "admin" if rank == 1 else ("manager" if rank == 2 else "staff")
+        ts = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S")
+        try:
+            cur = c.execute(
+                "INSERT INTO users (name,email,pw_hash,role,created,position_id,active) VALUES (?,?,?,?,?,?,1)",
+                (name, email, _hash(password), role, ts, position_id),
+            )
+            return cur.lastrowid
+        except sqlite3.IntegrityError:
+            raise ValueError(f"メールアドレス「{email}」は既に使用されています")
+
+
+def delete_user(user_id: int, current_user_id: int) -> None:
+    """ユーザーを削除する。固定アカウント・管理者・自分自身は削除不可。"""
+    if user_id == current_user_id:
+        raise ValueError("自分自身は削除できません")
+    with _conn() as c:
+        row = c.execute(
+            "SELECT u.email, p.rank AS position_rank FROM users u "
+            "LEFT JOIN positions p ON u.position_id=p.id WHERE u.id=?",
+            (user_id,),
+        ).fetchone()
+        if not row:
+            raise ValueError("ユーザーが見つかりません")
+        if row["email"] in FIXED_USER_EMAILS:
+            raise ValueError("デモ用固定アカウントは削除できません")
+        if (row["position_rank"] or 999) == 1:
+            raise ValueError("管理者ポジションのユーザーは削除できません")
+        c.execute("DELETE FROM users WHERE id=?", (user_id,))
 
 
 def list_users_by_role(role: str) -> list:
