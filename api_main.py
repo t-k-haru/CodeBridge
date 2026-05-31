@@ -21,7 +21,7 @@ load_dotenv()
 import core.auth as auth
 from core.ringi_orchestrator import analyze_request
 from core.orchestrator import run_pipeline
-from core.sandbox import apply_code, read_target_code
+from core.sandbox import apply_code, read_target_code, TARGET_PATH
 
 app = FastAPI(title="CodeBridge Ringi API")
 
@@ -570,6 +570,22 @@ def diag(user=Depends(require_admin())):
 @app.get("/api/health")
 def health():
     return {"status": "ok", "ts": datetime.utcnow().isoformat()}
+
+
+@app.get("/demo")
+def serve_demo():
+    """AI が書き換えた demo_local.html をキャッシュなしで返す。リロードで即時反映。"""
+    if not TARGET_PATH.exists():
+        raise HTTPException(404, "demo_local.html が見つかりません。target_app/demo_local.html を配置してください。")
+    return FileResponse(
+        str(TARGET_PATH),
+        media_type="text/html",
+        headers={
+            "Cache-Control": "no-cache, no-store, must-revalidate",
+            "Pragma": "no-cache",
+            "Expires": "0",
+        },
+    )
 
 
 frontend_dir = os.path.join(os.path.dirname(__file__), "frontend")
