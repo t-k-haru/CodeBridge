@@ -644,14 +644,15 @@ function fmtDate(ts){return ts?ts.replace("T"," ").substring(0,16):"—"}
 function escHtml(s){return String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}
 function renderMarkdown(md){let h=escHtml(md);h=h.replace(/^## (.+)$/gm,"<h2>$1</h2>");h=h.replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>");h=h.replace(/^[-・] (.+)$/gm,"<li>$1</li>");h=h.replace(/((?:<li>.*<\/li>\n?)+)/s,"<ul>$1</ul>");h=h.replace(/\n\n/g,"<br><br>");return h}
 // LCS ベースの行差分アルゴリズム（正確な diff）
-function lcsLineDiff(a,b){const m=a.length,n=b.length,dp=new Int32Array((m+1)*(n+1));for(let i=m-1;i>=0;i--)for(let j=n-1;j>=0;j--)dp[i*(n+1)+j]=a[i]===b[j]?dp[(i+1)*(n+1)+(j+1)]+1:Math.max(dp[(i+1)*(n+1)+j],dp[i*(n+1)+(j+1)]);const ops=[];let i=0,j=0;while(i<m||j<n){if(i<m&&j<n&&a[i]===b[j]){ops.push({t:'eq',s:a[i]});i++;j++}else if(j<n&&(i>=m||dp[i*(n+1)+(j+1)]>=dp[(i+1)*(n+1)+j])){ops.push({t:'add',s:b[j]});j++}else{ops.push({t:'del',s:a[i]});i++}}return ops}
+function lcsLineDiff(a,b){const m=a.length,n=b.length,dp=new Int32Array((m+1)*(n+1));for(let i=m-1;i>=0;i--)for(let j=n-1;j>=0;j--)dp[i*(n+1)+j]=a[i]===b[j]?dp[(i+1)*(n+1)+(j+1)]+1:Math.max(dp[(i+1)*(n+1)+j],dp[i*(n+1)+(j+1)]);const ops=[];let i=0,j=0;while(i<m||j<n){if(i<m&&j<n&&a[i]===b[j]){ops.push({t:'eq',s:a[i]});i++;j++}else if(j<n&&(i>=m||dp[i*(n+1)+(j+1)]>dp[(i+1)*(n+1)+j])){ops.push({t:'add',s:b[j]});j++}else{ops.push({t:'del',s:a[i]});i++}}return ops}
 // 差分表示：変更行前後3行コンテキスト付き、それ以外は省略
 function renderDiff(orig,newCode,targetId){
   const el=document.getElementById(targetId);
   if(!orig||!newCode){el.innerHTML='<span style="color:var(--txt2);font-size:12px">差分データなし</span>';return}
   const al=orig.split('\n'),bl=newCode.split('\n');
   // ファイルが大きい場合は高速フォールバック（行単位の単純比較）
-  const ops=(al.length+bl.length<=1200)?lcsLineDiff(al,bl):(()=>{const r=[],m=al.length,n=bl.length;let i=0,j=0;while(i<m||j<n){if(i<m&&j<n&&al[i]===bl[j]){r.push({t:'eq',s:al[i]});i++;j++}else if(i>=m){r.push({t:'add',s:bl[j]});j++}else if(j>=n){r.push({t:'del',s:al[i]});i++}else{r.push({t:'del',s:al[i]});r.push({t:'add',s:bl[j]});i++;j++}}return r})();
+  // LCS: al*bl<=4M（約2000行×2000行）まで使用。demo_local.html(~1060行)は必ずLCS
+  const ops=(al.length*bl.length<=4000000)?lcsLineDiff(al,bl):(()=>{const r=[],m=al.length,n=bl.length;let i=0,j=0;while(i<m||j<n){if(i<m&&j<n&&al[i]===bl[j]){r.push({t:'eq',s:al[i]});i++;j++}else if(i>=m){r.push({t:'add',s:bl[j]});j++}else if(j>=n){r.push({t:'del',s:al[i]});i++}else{r.push({t:'del',s:al[i]});r.push({t:'add',s:bl[j]});i++;j++}}return r})();
   let added=0,deleted=0;ops.forEach(o=>{if(o.t==='add')added++;else if(o.t==='del')deleted++});
   // 変更行の前後 C 行を表示対象にマーク
   const C=3,show=new Uint8Array(ops.length);
