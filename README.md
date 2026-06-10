@@ -1,7 +1,7 @@
 # CodeBridge — 「稟議」を再設計するAIエージェント
 
 > **🟢 現在は DEMOモードで公開中（ポートフォリオ用・課金0円）**
-> Microsoft Agent Hackathon 終了に伴い Azure 課金を停止しているため、AI生成ステップはサンプル応答に差し替えています。**ログイン → 入力 → 稟議書生成 → 承認** までの全フローは、APIキー無し・無料でローカル起動して体験できます（[起動方法](#実際に触れる)）。実際に Azure OpenAI を動かす場合は `DEMO_MODE=0` を設定してください。ライブのAzure環境（旧本番URL `https://codebridge-ringi.azurewebsites.net`）は停止済みです。
+> Microsoft Agent Hackathon 終了に伴い、AI生成ステップはサンプル応答に差し替えています。**ログイン → 入力 → 稟議書生成 → 承認** までの全フローは、APIキー無し・無料で体験できます（[オンラインデモ・起動方法](#実際に触れる)）。実際にLLMを動かす場合は `DEMO_MODE=0` を設定してください。
 
 ## 構造的な非対称性を再設計する
 
@@ -29,7 +29,10 @@ CodeBridgeは3つの段階でプロトタイプを実装しています。
 本番運用にはより強固なセキュリティが必要です。CodeBridgeは**組織の意思決定をAIエージェントがどこまで安全に補助できるか検証する**ため、最小限で一連の流れを動く形で実装しました。
 
 ## デモ動画
-[▶ デモ動画を見る（YouTube）](https://youtu.be/fr4rnvZifnI)
+
+<video src="https://github.com/t-k-haru/CodeBridge/raw/main/docs/demo.mp4" controls muted width="720"></video>
+
+> 動画が再生されない場合は [docs/demo.mp4](docs/demo.mp4) からダウンロードしてご覧ください。
 
 デモでは以下のフローを実演しています。
 1. 日本語でシフト管理システムの修正依頼を入力
@@ -38,25 +41,31 @@ CodeBridgeは3つの段階でプロトタイプを実装しています。
 4. リアルタイムでシステムを更新
 
 ## 実際に触れる
-- [**GitHubリポジトリ**](https://github.com/t-k-haru/CodeBridge)
 
-### ローカルで起動（DEMOモード・0円・APIキー不要）
-```bash
-git clone https://github.com/t-k-haru/CodeBridge.git
-cd CodeBridge
-pip install -r requirements.txt
+### 🌐 オンラインデモ（ローカル不要）
+👉 **https://codebridge-ringi.onrender.com**
 
-# DEMO_MODE はデフォルトON（Azure OpenAI を呼ばずサンプル応答 → 課金0円）
-uvicorn api_main:app --host 0.0.0.0 --port 8000
-```
-ブラウザで `http://localhost:8000` を開き、下記アカウントでログインしてください。
+ブラウザで開いて、下記のテストアカウントでそのままログインできます（無料ホスティングのため、初回アクセス時は起動に30〜60秒ほどかかる場合があります）。
 
 - **ログイン情報（テスト用）**
   - 管理者：`admin@codebridge.ai` / `Admin1234!`
   - エンジニア承認者：`manager@codebridge.ai` / `Manager1234!`
   - 申請者：`staff@codebridge.ai` / `Staff1234!`
 
-> 実際に Azure OpenAI を動かす場合は `.env` に `DEMO_MODE=0` と Azure の各キー（`AZURE_OPENAI_API_KEY` / `AZURE_OPENAI_ENDPOINT` / `AZURE_OPENAI_DEPLOYMENT`）を設定します。
+### 💻 ローカルで起動（DEMOモード・0円・APIキー不要）
+```bash
+git clone https://github.com/t-k-haru/CodeBridge.git
+cd CodeBridge
+pip install -r requirements.txt
+
+# DEMO_MODE はデフォルトON（LLMを呼ばずサンプル応答 → 課金0円）
+uvicorn api_main:app --host 0.0.0.0 --port 8000
+```
+ブラウザで `http://localhost:8000` を開きます。
+
+- [**GitHubリポジトリ**](https://github.com/t-k-haru/CodeBridge)
+
+> 実際にLLMを動かす場合は `.env` に `DEMO_MODE=0` とお使いの LLM API キーを設定します（変数名は [.env.example](.env.example) を参照）。
 
 ## CodeBridgeが埋める「空白地帯」
 CodeBridgeが取り組んでいる問題は、**組織の中で誰が変更を望み、誰が判断し、誰が承認し、その記録をどう残すか**です。
@@ -147,11 +156,11 @@ flowchart LR
         A["管理者<br/>全権限"]
     end
 
-            subgraph FE["フロントエンド<br/>Azure App Service が配信"]
+            subgraph FE["フロントエンド<br/>アプリサーバーが配信"]
         UI["Single Page App<br/>HTML / CSS / Vanilla JS<br/>依存ゼロ・高速"]
     end
 
-    subgraph BE["バックエンド<br/>Azure App Service"]
+    subgraph BE["バックエンド<br/>アプリサーバー（FastAPI）"]
         API["FastAPI<br/>REST API"]
         AUTH["認証<br/>JWT + SQLite"]
         ORCH["Orchestrator<br/>AIパイプライン管理"]
@@ -159,11 +168,11 @@ flowchart LR
         LOG["ログ・コスト追跡<br/>全操作を記録"]
     end
 
-    subgraph AI["AI基盤<br/>Azure AI Foundry"]
-        OAI["Azure OpenAI<br/>o4-mini"]
+    subgraph AI["AI基盤"]
+        OAI["LLM<br/>o4-mini"]
     end
 
-        subgraph TARGET["変更対象（同一 App Service 上で /demo として配信）"]
+        subgraph TARGET["変更対象（同一サーバー上で /demo として配信）"]
         ORIG["demo.html<br/>オリジナル<br/>変更禁止"]
         LOCAL["demo_local.html<br/>CodeBridge専用コピー<br/>/demo として公開"]
         BACKUP["自動バックアップ<br/>承認前に取得"]
@@ -216,7 +225,7 @@ flowchart LR
 sequenceDiagram
     actor 非エンジニア
     participant API as FastAPI
-    participant AI as Azure OpenAI o4-mini
+    participant AI as LLM o4-mini
     participant Sandbox as 隔離検証環境
     actor エンジニア
 
@@ -271,7 +280,7 @@ for i in range(MAX_DEBUG):
     raw = fix_code(current_html, err, instruction)
     current_html = extract_code_block(raw)
 ```
-検証にPythonの`html.parser`を使ったサンドボックスを採用しています。外部ブラウザやNode.jsを立ち上げずに軽量に検証できる点が、Azure App Service上での安定稼働に寄与しています。
+検証にPythonの`html.parser`を使ったサンドボックスを採用しています。外部ブラウザやNode.jsを立ち上げずに軽量に検証できる点が、サーバー上での安定稼働に寄与しています。
 
 ### 3. コスト追跡
 「AIを使ったらコストが見えない」という経営層・情シスの懸念は、AI導入の大きな障壁です。リクエスト単位でトークン数とコストを記録し、管理者画面でリアルタイムに確認できる設計にしました。
@@ -293,7 +302,7 @@ Admin      → 全機能 + ユーザー管理 + 活動ログ + コスト管理
 この設計の核心は「責任の帰属を明確にすること」です。AIが生成したコードは、エンジニアが承認して初めて本番に反映されます。承認したエンジニアの名前・日時はすべてログに残ります。
 
 ### 5. AI修正対象も同一インフラで配信
-従来のプロトタイプではAIが書き換える対象HTMLを外部ホスティングに置いていましたが、本実装では Azure App Service 上の `/demo` エンドポイントとして配信します。
+従来のプロトタイプではAIが書き換える対象HTMLを外部ホスティングに置いていましたが、本実装ではアプリサーバー上の `/demo` エンドポイントとして配信します。
 
 - 承認直後にエンドユーザーが**リロード一発で変更を反映確認できる**
 - 認証・APIサーバー・修正対象がすべて単一インスタンスで完結
@@ -421,7 +430,7 @@ CodeBridgeは組織のシステム変更に関わるため、セキュリティ�
 承認者が責任を持ちます。AIは「提案者」であり、実行するのは常に「承認したエンジニア」です。承認の記録は保存されます。
 
 ### ② 「社内情報をクラウドに上げるのが怖い」
-変更対象はローカルコピーのHTMLファイルのみです。本番データベースには直接AIが触れません。社内文書のRAG連携は完全オプトインで、使わなくても機能します。Azure OpenAIはデータをモデルの学習に使用しません（企業契約時）。
+変更対象はローカルコピーのHTMLファイルのみです。本番データベースには直接AIが触れません。社内文書のRAG連携は完全オプトインで、使わなくても機能します。利用するLLM APIは、企業向け契約時にはデータをモデルの学習に使用しない構成を選べます。
 
 ### ③ 「コストが見えない」
 リクエスト単位でトークン数とコストを記録します。今月のAI利用料が管理者画面でリアルタイムに表示されます。
@@ -441,8 +450,8 @@ CodeBridgeはその境界を引くためのツールです。確認型承認はA
 |---|---|---|
 | フロントエンド | HTML/CSS/Vanilla JS | 依存ゼロ・即時反応・モバイル対応 |
 | バックエンドAPI | FastAPI（Python 3.11） | 高速・型安全・OpenAPI自動生成 |
-| 実行環境 | Azure App Service（B2 / West US 2） | 常時起動・HTTPS・FastAPI が SPA配信 |
-| AI | Azure OpenAI o4-mini | 推論品質・コスト・Azure統合 |
+| 実行環境 | Render（Docker / 無料枠） | 無料・GitHub連携で自動デプロイ・HTTPS自動付与 |
+| AI | LLM（o4-mini） | 推論品質・コストのバランス |
 | 認証 | JWT + SQLite | 軽量・移行容易・PoC適切 |
 | サンドボックス | Python subprocess + html.parser | 外部依存ゼロ・軽量・日本語対応 |
 | ログ・コスト | SQLite | 永続化・CSV出力・リアルタイム閲覧 |

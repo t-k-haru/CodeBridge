@@ -1,0 +1,17 @@
+# Render 無料プランでの公開設定（DEMOモード・課金0円）
+# Render にサインイン → New + → Blueprint → このリポジトリを選択すると、
+# 本ファイルを読み取って自動デプロイされます。
+services:
+  - type: web
+    name: codebridge-ringi
+    runtime: docker
+    plan: free
+    region: oregon
+    healthCheckPath: /api/health
+    envVars:
+      # AIを呼ばずサンプル応答（課金0円）。実AIを動かす場合のみ 0 にしてキーを追加。
+      - key: DEMO_MODE
+        value: "1"
+      # 再起動後もログイン状態を保つため、ランダム値を自動生成して固定。
+      - key: JWT_SECRET
+        generateValue: true
