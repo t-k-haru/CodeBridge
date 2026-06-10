@@ -8,7 +8,7 @@ import re
 from dataclasses import dataclass, field
 from typing import Optional
 
-from core.azure_client import _call, get_last_token_usage
+from core.azure_client import _call, get_last_token_usage, DEMO_MODE
 from core.auth import estimate_cost
 
 EXTENSION_TYPES = {
@@ -70,7 +70,41 @@ extension_type:
 承認者選定: 提供されたapproverリストから最適な1名を選んでください。"""
 
 
+_CODE_KEYWORDS = ("コード", "システム", "画面", "変更", "実装", "修正", "機能", "バグ", "追加", "削除")
+
+
+def _demo_draft(raw_input: str, requester_name: str, available_approvers: list) -> RingiDraft:
+    """DEMOモード用のサンプル稟議書（AI非使用・課金0円）。"""
+    text = (raw_input or "").strip()
+    is_code = any(k in text for k in _CODE_KEYWORDS)
+    approver = available_approvers[0] if available_approvers else {"id": 0, "name": ""}
+    title = (text[:24] + "…") if len(text) > 24 else (text or "申請")
+    body = (
+        "## 申請背景\n" + (text or "（申請者の入力内容がここに入ります）") + "\n\n"
+        "## 変更内容\n申請内容に基づき対応を実施します。\n\n"
+        "## 想定影響・リスク\nこれはDEMOモードのサンプル本文です。実運用時はAzure OpenAIが自動生成します。\n\n"
+        "## 承認のお願い\n上記についてご承認をお願いいたします。"
+    )
+    return RingiDraft(
+        approval_type="judge",
+        draft_title="【DEMO】" + title,
+        draft_body=body,
+        suggested_approver_id=int(approver.get("id", 0)),
+        suggested_approver_name=approver.get("name", ""),
+        suggested_approver_reason="DEMOモードの自動選定（承認者リストの先頭）",
+        extension_type="code_deploy" if is_code else None,
+        risk_level="medium",
+        key_points=["これはDEMOモードのサンプル稟議書です", "AIは呼び出していません（課金0円）"],
+        input_tokens=0,
+        output_tokens=0,
+        cost_usd=0.0,
+    )
+
+
 def analyze_request(raw_input: str, requester_name: str, available_approvers: list) -> RingiDraft:
+    if DEMO_MODE:
+        return _demo_draft(raw_input, requester_name, available_approvers)
+
     approvers_desc = "\n".join(
         f"- id={a['id']}, name={a['name']}, role={a['role']}"
         for a in available_approvers

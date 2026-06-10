@@ -1,13 +1,19 @@
 # -*- coding: utf-8 -*-
 import os, re
-from openai import AzureOpenAI
 
 _last_usage = {"input": 0, "output": 0}
+
+# DEMOモード（ポートフォリオ用）。デフォルトON。
+# ON のあいだ Azure OpenAI を一切呼ばず、サンプル応答を返すため課金は0円。
+# 実際にAIを動かすには DEMO_MODE=0 を設定し、Azure の各キーを用意すること。
+DEMO_MODE = os.getenv("DEMO_MODE", "1").strip().lower() in ("1", "true", "yes", "on")
+
 
 def get_last_token_usage():
     return _last_usage["input"], _last_usage["output"]
 
 def _get_client():
+    from openai import AzureOpenAI
     ep = os.getenv("AZURE_OPENAI_ENDPOINT", "")
     if "/api/projects/" in ep:
         ep = ep.split("/api/projects/")[0] + "/"
@@ -20,6 +26,9 @@ def _get_client():
 DEPLOY = os.getenv("AZURE_OPENAI_DEPLOYMENT", "o4-mini")
 
 def _call(messages, max_tokens=32000):
+    if DEMO_MODE:
+        # ポートフォリオ用の安全網。DEMOモードでは課金APIを絶対に叩かない。
+        raise RuntimeError("DEMO_MODE is enabled — Azure OpenAI calls are disabled (課金0円)")
     client = _get_client()
     resp = client.chat.completions.create(
         model=DEPLOY, messages=messages, max_completion_tokens=max_tokens,
@@ -41,6 +50,15 @@ SYS = (
 )
 
 def generate_code(instruction, existing_code):
+    if DEMO_MODE:
+        # AIは呼ばず、既存HTMLにデモ用コメントを1行だけ差し込んで「変更例」として返す。
+        _last_usage["input"] = _last_usage["output"] = 0
+        marker = f"\n<!-- DEMO: AIによる変更プレビュー（指示: {instruction[:40]}）-->\n"
+        if "</body>" in existing_code:
+            new_code = existing_code.replace("</body>", marker + "</body>", 1)
+        else:
+            new_code = existing_code + marker
+        return "```html\n" + new_code + "\n```"
     return _call([
         {"role": "system", "content": SYS},
         {"role": "user", "content": (
@@ -52,6 +70,9 @@ def generate_code(instruction, existing_code):
     ])
 
 def fix_code(code, error, instruction):
+    if DEMO_MODE:
+        _last_usage["input"] = _last_usage["output"] = 0
+        return "```html\n" + code + "\n```"
     return _call([{"role": "user", "content": (
         "Fix this HTML validation error while keeping the original instruction.\n"
         "[Instruction]: " + instruction + "\n"
@@ -62,6 +83,15 @@ def fix_code(code, error, instruction):
 
 def generate_report(instruction, original, new_code, test_output, test_error, iterations):
     status = "成功" if not test_error else "要確認"
+    if DEMO_MODE:
+        _last_usage["input"] = _last_usage["output"] = 0
+        return (
+            f"【DEMOモード】これはサンプルレポートです（AIは呼び出していません・課金0円）。\n\n"
+            f"・指示: {instruction}\n"
+            f"・検証結果: {status}（{iterations}回）\n"
+            f"・変更概要: 既存HTMLに変更プレビュー用コメントを追加しました。\n"
+            f"・リスク: 実運用時はここにAIが生成したレビュー所見が入ります。"
+        )
     return _call([{"role": "user", "content": (
         "Create a concise HTML report in Japanese for an engineer reviewing this HTML change.\n"
         "Instruction: " + instruction + "\n"

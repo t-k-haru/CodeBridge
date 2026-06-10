@@ -2,15 +2,24 @@
 
 日本企業向けの稟議AIエージェントシステム。申請者が自然文で入力するだけで稟議書草案を自動生成し、承認フローを効率化する。Azure Hackathon 向けプロジェクト。
 
-## 本番環境
+> **🟢 現在は DEMOモード（ポートフォリオ運用）**
+> Microsoftコンテスト終了に伴い、課金回避のため Azure OpenAI 呼び出しを停止している。
+> 環境変数 `DEMO_MODE=1`（デフォルト）のあいだ、AIは一切呼ばれずサンプル稟議書を返すため**課金は0円・APIキー不要**。ログイン〜入力〜稟議書生成〜承認まで全フローはそのまま動作する。
+> 実際にAIを動かすには `DEMO_MODE=0` を設定し、Azure OpenAI の各キーを用意すること。
+> GitHub Actions の自動デプロイ（`deploy.yml`）も `workflow_dispatch`（手動のみ）に変更済み。
+> **注意:** 毎月課金される Azure App Service Plan（`codebridge-plan2`）は、Azureポータルで別途「停止」または「削除」する必要がある（リポジトリ側のコードだけでは止まらない）。
 
-| 項目 | 値 |
+## 本番環境（停止済み）
+
+> ⚠️ ハッカソン終了に伴い、下記 Azure リソースは課金回避のため**削除/停止予定**。本番URLは停止する。現在は DEMOモードでのポートフォリオ運用。
+
+| 項目 | 値（旧） |
 |---|---|
-| 本番URL | https://codebridge-ringi.azurewebsites.net |
+| 本番URL（停止） | https://codebridge-ringi.azurewebsites.net |
 | Azureリソースグループ | `codebridge-rg` |
 | App Service名 | `codebridge-ringi` |
 | App Service Plan | `codebridge-plan2`（West US 2） |
-| デプロイ方式 | main push → GitHub Actions（`.github/workflows/deploy.yml`） |
+| デプロイ方式 | （旧）main push → GitHub Actions。現在は手動実行のみ（`workflow_dispatch`） |
 
 ## 技術スタック
 

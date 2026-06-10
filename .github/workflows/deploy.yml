@@ -1,8 +1,10 @@
 name: Deploy to Azure App Service
 
+# ポートフォリオ運用のため自動デプロイは無効化（Microsoftコンテスト終了後の課金回避）。
+# Azure App Service を再稼働させたい場合のみ、GitHub の Actions 画面から手動実行する。
+# 自動デプロイに戻すには下記を `push: { branches: [main] }` に変更すること。
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 jobs:
   deploy-backend:

@@ -562,11 +562,14 @@ def diag(user=Depends(require_admin())):
     from pathlib import Path
     from urllib.parse import urlparse
 
+    from core.azure_client import DEMO_MODE
+
     raw_ep = os.getenv("AZURE_OPENAI_ENDPOINT", "")
     resolved = raw_ep.split("/api/projects/")[0] + "/" if "/api/projects/" in raw_ep else raw_ep
     host = urlparse(resolved).hostname or "(parse failed)"
 
     info = {
+        "demo_mode": DEMO_MODE,
         "env": {
             "AZURE_OPENAI_ENDPOINT":   bool(raw_ep),
             "AZURE_OPENAI_API_KEY":    bool(os.getenv("AZURE_OPENAI_API_KEY")),
