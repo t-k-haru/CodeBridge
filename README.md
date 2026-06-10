@@ -1,7 +1,6 @@
 # CodeBridge — 「稟議」を再設計するAIエージェント
 
-> **🟢 現在は DEMOモードで公開中（ポートフォリオ用・課金0円）**
-> Microsoft Agent Hackathon 終了に伴い、AI生成ステップはサンプル応答に差し替えています。**ログイン → 入力 → 稟議書生成 → 承認** までの全フローは、APIキー無し・無料で体験できます（[オンラインデモ・起動方法](#実際に触れる)）。実際にLLMを動かす場合は `DEMO_MODE=0` を設定してください。
+> AI生成ステップはサンプル応答に差し替えています。**ログイン → 入力 → 稟議書生成 → 承認** までの全フローは、APIキー無し・無料で体験できます（[オンラインデモ・起動方法](#実際に触れる)）。
 
 ## 構造的な非対称性を再設計する
 
@@ -32,8 +31,6 @@ CodeBridgeは3つの段階でプロトタイプを実装しています。
 
 https://github.com/user-attachments/assets/75316cd5-bce9-46c3-8654-17c886c54406
 
-> 再生されない場合は [docs/demo.mp4](docs/demo.mp4) からもご覧いただけます。
-
 デモでは以下のフローを実演しています。
 1. 日本語でシフト管理システムの修正依頼を入力
 2. AIがHTMLを修正・検証
@@ -52,7 +49,7 @@ https://github.com/user-attachments/assets/75316cd5-bce9-46c3-8654-17c886c54406
   - エンジニア承認者：`manager@codebridge.ai` / `Manager1234!`
   - 申請者：`staff@codebridge.ai` / `Staff1234!`
 
-### 💻 ローカルで起動（DEMOモード・0円・APIキー不要）
+### 💻 ローカル起動
 ```bash
 git clone https://github.com/t-k-haru/CodeBridge.git
 cd CodeBridge
@@ -459,5 +456,3 @@ CodeBridgeはその境界を引くためのツールです。確認型承認はA
 ## 参考資料
 - [エイトレッド「稟議書に関する実態調査」](https://prtimes.jp/main/html/rd/p/000000088.000050743.html)
 - [ワークスアイディ「AIエージェント時代に『承認』はどう変わる？」](https://dx.worksid.co.jp/content/ai-agent-approval/)
-
-*本作品はMicrosoft Agent Hackathon powered by Tokyo Electron Deviceへの提出作品です。*
