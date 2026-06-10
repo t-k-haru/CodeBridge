@@ -9,15 +9,17 @@
 > GitHub Actions の自動デプロイ（`deploy.yml`）も `workflow_dispatch`（手動のみ）に変更済み。
 > **注意:** 毎月課金される Azure App Service Plan（`codebridge-plan2`）は、Azureポータルで別途「停止」または「削除」する必要がある（リポジトリ側のコードだけでは止まらない）。
 
-## 本番環境
+## 本番環境（停止済み）
 
-| 項目 | 値 |
+> ⚠️ ハッカソン終了に伴い、下記 Azure リソースは課金回避のため**削除/停止予定**。本番URLは停止する。現在は DEMOモードでのポートフォリオ運用。
+
+| 項目 | 値（旧） |
 |---|---|
-| 本番URL | https://codebridge-ringi.azurewebsites.net |
+| 本番URL（停止） | https://codebridge-ringi.azurewebsites.net |
 | Azureリソースグループ | `codebridge-rg` |
 | App Service名 | `codebridge-ringi` |
 | App Service Plan | `codebridge-plan2`（West US 2） |
-| デプロイ方式 | main push → GitHub Actions（`.github/workflows/deploy.yml`） |
+| デプロイ方式 | （旧）main push → GitHub Actions。現在は手動実行のみ（`workflow_dispatch`） |
 
 ## 技術スタック
 
