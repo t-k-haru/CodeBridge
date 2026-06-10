@@ -30,9 +30,7 @@ CodeBridgeは3つの段階でプロトタイプを実装しています。
 
 ## デモ動画
 
-<video src="https://github.com/t-k-haru/CodeBridge/raw/main/docs/demo.mp4" controls muted width="720"></video>
-
-> 動画が再生されない場合は [docs/demo.mp4](docs/demo.mp4) からダウンロードしてご覧ください。
+▶️ **[デモ動画を再生する（GitHub上で視聴できます）](docs/demo.mp4)**
 
 デモでは以下のフローを実演しています。
 1. 日本語でシフト管理システムの修正依頼を入力
