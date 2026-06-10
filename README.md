@@ -30,7 +30,7 @@ CodeBridgeは3つの段階でプロトタイプを実装しています。
 
 ## デモ動画
 
-https://github.com/t-k-haru/CodeBridge/raw/main/docs/demo.mp4
+<video src="https://github.com/t-k-haru/CodeBridge/raw/main/docs/demo.mp4" controls muted width="720"></video>
 
 > 動画が再生されない場合は [docs/demo.mp4](docs/demo.mp4) からダウンロードしてご覧ください。
 
