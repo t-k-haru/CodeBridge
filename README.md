@@ -1,6 +1,6 @@
-# CodeBridge — 「稟議」を再設計するAIエージェント
+# CodeBridge 「稟議」を再設計するAIエージェント
 
-> AI生成ステップはサンプル応答に差し替えています。**ログイン → 入力 → 稟議書生成 → 承認** までの全フローは、APIキー無し・無料で体験できます（[オンラインデモ・起動方法](#実際に触れる)）。
+> AI生成ステップはサンプル応答に差し替えています。
 
 ## 構造的な非対称性を再設計する
 
@@ -37,10 +37,10 @@ https://github.com/user-attachments/assets/75316cd5-bce9-46c3-8654-17c886c54406
 3. エンジニアが差分とAIレポートを確認して承認
 4. リアルタイムでシステムを更新
 
-## 実際に触れる
+## デモ
 
-### 🌐 オンラインデモ（ローカル不要）
-👉 **https://codebridge-ringi.onrender.com**
+### オンラインデモ
+ **https://codebridge-ringi.onrender.com**
 
 ブラウザで開いて、下記のテストアカウントでそのままログインできます（無料ホスティングのため、初回アクセス時は起動に30〜60秒ほどかかる場合があります）。
 
@@ -49,7 +49,7 @@ https://github.com/user-attachments/assets/75316cd5-bce9-46c3-8654-17c886c54406
   - エンジニア承認者：`manager@codebridge.ai` / `Manager1234!`
   - 申請者：`staff@codebridge.ai` / `Staff1234!`
 
-### 💻 ローカル起動
+### ローカル起動
 ```bash
 git clone https://github.com/t-k-haru/CodeBridge.git
 cd CodeBridge
